@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.sqlite
+*.sqlite3
+evidence/*.png
+evidence/*.jpg
+npm-debug.log
