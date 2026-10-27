@@ -1,0 +1,94 @@
+/* Druk Bank - stylesheet
+   A calm, trustworthy banking look: deep navy ink, a single emerald accent for
+   money actions, lots of whitespace. Deliberately not the gallery's style. */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#f4f6f8;
+  --ink:#0f2233;
+  --ink-soft:#44586a;
+  --surface:#ffffff;
+  --line:#e2e8ee;
+  --navy:#0f2a43;
+  --emerald:#0e9f6e;
+  --emerald-press:#0b8a5f;
+  --danger:#d64532;
+  --danger-bg:#fdecea;
+  --warn-bg:#fff6e8;
+  --radius:16px;
+  --shadow:0 1px 2px rgba(15,34,51,.05),0 10px 30px rgba(15,34,51,.07);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-.01em;margin:0}
+a{color:var(--emerald);text-decoration:none} a:hover{text-decoration:underline}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  background:var(--navy);color:#fff;padding:16px 30px}
+.topbar .brand{display:flex;align-items:center;gap:11px;font-family:'Plus Jakarta Sans';
+  font-weight:800;font-size:19px}
+.topbar .brand .logo{width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,var(--emerald),#7bd0a8);display:inline-block}
+.topbar .who{font-size:13px;color:#b9c7d4}
+.topbar .who a{color:#fff}
+
+.modeswitch{display:flex;background:#1b3c59;border-radius:999px;padding:4px;gap:4px}
+.modeswitch a{font-size:12.5px;font-weight:600;padding:6px 15px;border-radius:999px;color:#b9c7d4}
+.modeswitch a:hover{text-decoration:none;color:#fff}
+.modeswitch a.on-vuln{background:var(--danger);color:#fff}
+.modeswitch a.on-safe{background:var(--emerald);color:#fff}
+
+.wrap{max-width:960px;margin:0 auto;padding:30px}
+
+.banner{display:flex;gap:11px;border-radius:var(--radius);padding:14px 18px;
+  margin-bottom:24px;font-size:14px;border:1px solid transparent}
+.banner.vuln{background:var(--danger-bg);border-color:#f3cfc9;color:#7e241a}
+.banner.safe{background:#e9f7f0;border-color:#bfe6d2;color:#0b5e3c}
+.banner .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}
+.banner.vuln .dot{background:var(--danger)} .banner.safe .dot{background:var(--emerald)}
+
+.cols{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:24px}
+.card h2{font-size:15px;font-weight:700;margin-bottom:16px}
+
+.balance{font-family:'Plus Jakarta Sans';font-weight:800;font-size:40px;letter-spacing:-.02em}
+.balance .cur{font-size:18px;color:var(--ink-soft);font-weight:600;margin-right:6px}
+.balance-label{color:var(--ink-soft);font-size:13px;margin-bottom:4px}
+.acct{color:var(--ink-soft);font-size:13px;margin-top:6px}
+
+label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px;color:var(--ink-soft)}
+input[type=text],input[type=number],input[type=password],input[type=email]{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font:inherit}
+input:focus{outline:2px solid #bfe6d2;border-color:var(--emerald)}
+.btn{appearance:none;border:none;cursor:pointer;font:inherit;font-weight:700;
+  background:var(--emerald);color:#fff;padding:12px 22px;border-radius:11px;margin-top:18px}
+.btn:hover{background:var(--emerald-press)} .btn.full{width:100%}
+
+.flash{border-radius:11px;padding:12px 16px;margin-bottom:20px;font-size:14px}
+.flash.good{background:#e9f7f0;color:#0b5e3c;border:1px solid #bfe6d2}
+.flash.warn{background:var(--danger-bg);color:#7e241a;border:1px solid #f3cfc9}
+
+.activity{list-style:none;margin:0;padding:0}
+.activity li{display:flex;justify-content:space-between;padding:11px 0;
+  border-bottom:1px solid var(--line);font-size:14px}
+.activity li:last-child{border-bottom:none}
+.activity .out{color:var(--danger);font-weight:600}
+.activity .in{color:var(--emerald);font-weight:600}
+.muted{color:var(--ink-soft);font-size:13px}
+.token-note{margin-top:14px;font-size:12px;color:var(--ink-soft);
+  background:#f1f5f9;border-radius:8px;padding:8px 11px;word-break:break-all}
+
+/* login */
+.login-wrap{max-width:380px;margin:70px auto;padding:0 20px}
+.login-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:30px}
+.login-card h1{font-size:22px;margin-bottom:6px}
+.login-card p{color:var(--ink-soft);font-size:14px;margin:0 0 10px}
+
+footer{max-width:960px;margin:0 auto;padding:18px 30px 40px;color:var(--ink-soft);font-size:12px}

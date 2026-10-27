@@ -1,0 +1,91 @@
+Running all file upload attacks against http://127.0.0.1:5002
+
+========================================================================
+  ATTACK 0: Baseline, a normal photo
+========================================================================
+A real PNG should upload cleanly. This is the behaviour we keep.
+------------------------------------------------------------------------
+vulnerable: holiday.png on disk: True
+secure    : accepted and re-encoded to a random name (see flash)
+
+========================================================================
+  ATTACK 1: Disguised script, double extension (shell.php.png)
+========================================================================
+A PHP web shell named shell.php.png. A check that only looks at the
+last extension sees .png and lets it through.
+------------------------------------------------------------------------
+vulnerable: stored on disk as: ['shell.php.png']
+On a PHP server, requesting this file would run the shell and give
+the attacker command execution. Flask does not run PHP, so here the
+damage is that a disguised executable was accepted and stored.
+
+========================================================================
+  ATTACK 2: Content-Type spoofing
+========================================================================
+An HTML file sent with the header Content-Type: image/png. A server
+that trusts the header believes it is an image.
+------------------------------------------------------------------------
+vulnerable: fake.png stored. First bytes on disk: b'<html><body>not real'
+The header said image/png but the bytes are HTML. No real check ran.
+
+========================================================================
+  ATTACK 3: Stored XSS through an uploaded HTML file
+========================================================================
+Upload an .html file that contains a script. The server serves it
+back as text/html, so the browser runs the script in the site's
+origin. Anyone who opens it is attacked.
+------------------------------------------------------------------------
+vulnerable: /uploads/pwn.html served with Content-Type: text/html; charset=utf-8
+            script tag present in response: True
+Open http://127.0.0.1:5002/uploads/pwn.html in a browser to see it run.
+
+========================================================================
+  ATTACK 4: Stored XSS through an uploaded SVG
+========================================================================
+SVG is an image format, but it can carry script. Served as
+image/svg+xml and opened directly, the script runs.
+------------------------------------------------------------------------
+vulnerable: /uploads/pwn.svg served with Content-Type: image/svg+xml; charset=utf-8
+            script tag present: True
+
+========================================================================
+  ATTACK 5: Path traversal through the filename
+========================================================================
+The filename itself is the attack. ../ steps out of the uploads
+folder and writes the file somewhere it should never reach.
+------------------------------------------------------------------------
+vulnerable: payload filename was '../../../../tmp/aperture_pwned.txt'
+            file written OUTSIDE uploads at /tmp/aperture_pwned.txt
+            contents: this file escaped the uploads folder
+
+========================================================================
+  ATTACK 6: Overwriting an existing gallery file
+========================================================================
+Upload a file with the same name as one already there. With no
+unique naming, it silently replaces the original.
+------------------------------------------------------------------------
+vulnerable: mountains.jpg bytes changed: True   (the original gallery photo was replaced)
+
+========================================================================
+  ATTACK 7: No size limit
+========================================================================
+A big upload is accepted with no cap, which lets an attacker fill the
+disk. Here we send a 5 MB file.
+------------------------------------------------------------------------
+vulnerable: huge.png (5 MB) on disk: True
+
+========================================================================
+  ATTACK 8: The same uploads against the secure uploader
+========================================================================
+The secure handler checks size, extension allowlist, real content,
+re-encodes the image, and renames it. Each bad upload is handled:
+------------------------------------------------------------------------
+  disguised php shell    -> Rejected: the file is not a valid image, whatever its name says.
+  html renamed to .png   -> Rejected: the file is not a valid image, whatever its name says.
+  html file              -> Rejected: .html is not an allowed image type.
+  svg with script        -> Rejected: .svg is not an allowed image type.
+  5 MB file              -> Rejected: file is larger than 3 MB.
+  a genuine image        -> Accepted and re-encoded as 086d60e4cf644a809b405d970bb46c4e.jpg. Original name and any hidden content were discarded.
+
+------------------------------------------------------------------------
+Done. Restart the server (python3 app.py) to reset the gallery.

@@ -1,0 +1,47 @@
+Victim pema is logged in. The session cookie is now held by the browser.
+Starting balances: {'pema': 50000, 'mallory': 0}
+
+========================================================================
+  ATTACK 1: Forged POST with no CSRF token (vulnerable /transfer)
+========================================================================
+A page on another site auto-submits this form. The browser attaches
+the bank cookie on its own. There is no CSRF token anywhere.
+------------------------------------------------------------------------
+before: {'pema': 50000, 'mallory': 0}
+after : {'pema': 30000, 'mallory': 20000}  <- Nu 20,000 moved to mallory with a forged request
+
+========================================================================
+  ATTACK 2: Forged GET through an image tag (vulnerable /transfer)
+========================================================================
+The bank accepts GET for transfers, so <img src=.../transfer?...>
+fires it just by loading. No form and no script are needed.
+------------------------------------------------------------------------
+before: {'pema': 30000, 'mallory': 20000}
+after : {'pema': 25000, 'mallory': 25000}  <- Nu 5,000 moved just by loading an image URL
+
+========================================================================
+  ATTACK 3: Same forged request against the secure endpoint
+========================================================================
+Now the forged POST hits /secure/transfer, which demands the token.
+------------------------------------------------------------------------
+before: {'pema': 25000, 'mallory': 25000}
+after : {'pema': 25000, 'mallory': 25000}  <- unchanged, the forged request was blocked
+
+Trying again with a made up token:
+after : {'pema': 25000, 'mallory': 25000}  <- still blocked, the guess is wrong
+
+========================================================================
+  ATTACK 4: A genuine transfer through the secure form still works
+========================================================================
+The real page includes the correct token, so a real transfer by the
+account owner goes through normally.
+------------------------------------------------------------------------
+token read from the owner's own page: f6547c31c36f70d1 ...
+before: {'pema': 25000, 'mallory': 25000}
+after : {'pema': 24000, 'mallory': 26000}  <- Nu 1,000 sent, accepted because the token matched
+
+------------------------------------------------------------------------
+Summary: the vulnerable endpoint moved money on any request that
+carried the login cookie. The secure endpoint moved money only when
+the correct CSRF token was present, which a forged cross site request
+cannot obtain. Restart app.py to reset balances.

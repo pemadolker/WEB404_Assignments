@@ -1,0 +1,3 @@
+note: internal server inventory
+DB_HOST=db.internal
+ADMIN_EMAIL=admin@shop.bt

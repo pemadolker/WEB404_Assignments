@@ -1,0 +1,14 @@
+# python
+venv/
+__pycache__/
+*.pyc
+
+# lab runtime files
+*.log
+*.db
+lab.db
+uploads/*
+!uploads/.gitkeep
+
+# os
+.DS_Store

