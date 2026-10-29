@@ -13,7 +13,8 @@ Insecure on purpose. Run only on your own machine, on localhost.
 - `tokens.py` - a small, readable JWT implementation (issue, verify, forge)
 - `static/style.css` - the console styling
 - `attacks.py` - runs all four attacks against both verifiers
-- `LAB_REPORT.md` - the report 
+- `LAB_REPORT.docx` / `.pdf` / `.md` - the report (submit the docx)
+- `RECREATE_STEPS.md` - how to run it and take your own screenshots
 - `attack_output.txt` - saved output of a real run
 - `screenshots/` - the screenshots used in the report
 

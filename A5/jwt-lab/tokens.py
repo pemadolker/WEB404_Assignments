@@ -20,7 +20,7 @@ import json
 import time
 
 # WEAK on purpose, so the brute force demo can crack it.
-HS_SECRET = b"druk2024"
+HS_SECRET = b"zorig2026"
 
 
 class JWTError(Exception):

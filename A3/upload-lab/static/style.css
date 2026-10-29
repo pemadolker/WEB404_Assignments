@@ -50,6 +50,9 @@ a:hover{text-decoration:underline}
 .brand .tag{font-size:13px;color:var(--muted)}
 
 /* mode switch */
+.topnav{display:flex;align-items:center;gap:20px;font-size:14px;color:var(--muted)}
+.topnav a{color:var(--ink);text-decoration:none}
+.topnav a:hover{color:var(--accent)}
 .modeswitch{display:flex;background:var(--canvas);border:1px solid var(--line);
   border-radius:999px;padding:4px;gap:4px}
 .modeswitch a{

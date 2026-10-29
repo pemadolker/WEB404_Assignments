@@ -16,8 +16,8 @@ localhost and must never be placed on a real network.
 - `attacks.py` - runs every upload attack and prints what each one did
 - `seed/` - the four sample photos the gallery starts with
 - `_attackfiles/` - the malicious test files (web shell, XSS html and svg, etc.)
-- `LAB_REPORT.md` - the report 
-- `attack_output.txt` - saved output of a real attack run
+- `LAB_REPORT.md` - the report source
+- `attack_output.txt` - saved output of a  attack run
 - `screenshots/` - the screenshots used in the report
 
 ## Setup

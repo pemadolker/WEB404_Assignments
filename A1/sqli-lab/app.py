@@ -1,40 +1,46 @@
 """
 app.py  -  Norbu Electronics
-A small online electronics store, used to demonstrate every common class of SQL
-injection, with a secure version of each feature so the before and after can be
-compared using the exact same payloads.
+An online electronics store. The store is a normal looking web app; the SQL
+injection flaws are real but not advertised anywhere in the interface, exactly
+as they would be on a genuine vulnerable site.
 
-Every risky feature exists twice. The normal version is at a path like /login
-and the fixed version is at /secure/login. The query logic is the only thing
-that changes between them, so any difference in behaviour is caused by the
-injection defence alone.
+The attacks and the fixes are documented in the lab report, not on the page.
 
-  /login     vulnerable     /secure/login     fixed   (auth bypass, error)
-  /product   vulnerable     /secure/product   fixed   (UNION, numeric context)
-  /search    vulnerable     /secure/search    fixed   (UNION, string context)
-  /profile   vulnerable     /secure/profile   fixed   (boolean + time blind)
-  /track     vulnerable     /secure/track     fixed   (stacked queries)
-  /reset     vulnerable                               (second order)
+Routes:
+  /                     storefront
+  /product, /search     product browsing   (UNION injection points)
+  /login                account sign in     (auth bypass, error based)
+  /account              account / admin dashboard after login
+  /check-username       registration helper (blind injection point)
+  /track                view counter        (stacked queries)
+  /register, /reset     (second order injection)
 
-The vulnerable routes paste user input straight into the SQL string. The secure
-routes use parameterised queries, and input validation where it fits.
+Each vulnerable feature has a hardened counterpart under /secure/ used by the
+report to show the before and after. The secure routes render the same pages,
+so they look identical; only the query handling differs.
 
-WARNING: insecure on purpose. Run only on localhost. Never deploy it.
+WARNING: insecure on purpose. Run only on localhost.
 """
 
-from flask import Flask, request, render_template_string, jsonify
+from flask import (Flask, request, render_template_string, redirect, url_for,
+                   session, jsonify)
 import sqlite3
 from database import init_db, get_connection
 
 app = Flask(__name__)
-init_db()   # rebuild the database on every start, so the lab is repeatable
+app.secret_key = "norbu-store-session"
+init_db()
 
 IMG = {"keyboard": "keyboard", "mouse": "mouse", "monitor": "monitor",
        "webcam": "webcam"}
 
 
+def display_name(username):
+    return " ".join(p.capitalize() for p in username.replace(".", " ").split())
+
+
 # ---------------------------------------------------------------------------
-# Shared page shell (the polished storefront chrome)
+# Shell
 # ---------------------------------------------------------------------------
 
 SHELL = """
@@ -44,8 +50,8 @@ SHELL = """
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head><body>
 <div class="topbar">
-  <div class="brand"><span class="dot"></span>
-    <div>Norbu Electronics<small>Thimphu's online tech store</small></div></div>
+  <a href="/" class="brand"><span class="dot"></span>
+    <div>Norbu Electronics<small>Thimphu's online tech store</small></div></a>
   <div class="searchbar">
     <form method="get" action="/search">
       <input name="q" placeholder="Search products..." value="">
@@ -54,34 +60,28 @@ SHELL = """
   </div>
   <div class="topnav">
     <a href="/">Store</a>
-    <a href="/login">Sign in</a>
+    {% if user %}<a href="/account">{{ display }}</a>
+      <a href="/logout">Sign out</a>
+    {% else %}<a href="/login">Sign in</a>{% endif %}
     <a href="/cart" class="cart">Cart</a>
   </div>
 </div>
 <div class="wrap">
 {{ body|safe }}
 </div>
-<footer>Norbu Electronics is a teaching app for the SQL injection practical.
-Do not deploy it. Every feature has a secure version under /secure/.</footer>
+<footer>&copy; 2026 Norbu Electronics Pvt. Ltd., Thimphu. All rights reserved.</footer>
 </body></html>
 """
 
 
 def page(title, body):
-    return render_template_string(SHELL, title=title, body=body)
-
-
-def mode_strip(kind, this_path, other_path, other_label):
-    """The little vulnerable/secure indicator shown on each demo page."""
-    pill = (f"<span class='pill {'vuln' if kind=='vulnerable' else 'safe'}'>"
-            f"{'vulnerable endpoint' if kind=='vulnerable' else 'secure endpoint'}</span>")
-    return (f"<div class='modestrip'>{pill} "
-            f"<span>you are on <code>{this_path}</code></span> "
-            f"<span>&middot;</span> <a href='{other_path}'>try the {other_label}</a></div>")
+    user = session.get("user")
+    return render_template_string(SHELL, title=title, body=body, user=user,
+                                  display=display_name(user) if user else "")
 
 
 # ---------------------------------------------------------------------------
-# Home: the storefront
+# Storefront
 # ---------------------------------------------------------------------------
 
 @app.route("/")
@@ -95,29 +95,23 @@ def home():
         cards += f"""
         <div class="pcard">
           <a href="/product?id={r['id']}"><div class="ph">
-            <img src="{{{{ url_for('static', filename='img/{img}.jpg') }}}}" alt="{r['name']}">
+            <img src="{url_for('static', filename='img/'+img+'.jpg')}" alt="{r['name']}">
           </div></a>
-          <div class="body">
-            <div class="name">{r['name']}</div>
+          <div class="body"><div class="name">{r['name']}</div>
             <div class="desc">{r['description']}</div>
             <div class="foot"><span class="price">Nu. {int(r['price']):,}</span>
-              <a class="view" href="/product?id={r['id']}">View &rarr;</a></div>
-          </div>
+              <a class="view" href="/product?id={r['id']}">View &rarr;</a></div></div>
         </div>"""
     body = f"""
-    <div class="hero">
-      <span class="tagpill">New arrivals this week</span>
+    <div class="hero"><span class="tagpill">New arrivals this week</span>
       <h1>Gear up for the semester.</h1>
       <p>Keyboards, monitors and accessories, delivered across Thimphu. Sign in
-      to track orders and save your cart.</p>
-    </div>
+      to track orders and save your cart.</p></div>
     <div class="sectionhead"><h2>Popular products</h2>
       <span class="muted">{len(rows)} items</span></div>
     <div class="grid">{cards}</div>
     """
-    # cards contain url_for template tags, so render once more
-    return render_template_string(SHELL, title="Store",
-                                  body=render_template_string(body))
+    return page("Store", body)
 
 
 @app.route("/cart")
@@ -126,235 +120,227 @@ def cart():
                 "<div class='box'>Your cart is empty.</div>")
 
 
-# ===========================================================================
-# 1. LOGIN  ->  authentication bypass + error disclosure
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Product browsing  (UNION injection points, numeric and string)
+# ---------------------------------------------------------------------------
 
-LOGIN_FORM = """
-<h1 class="page">Sign in to your account</h1>
-<p class="sub">Access your orders and saved items.</p>
-{{ strip|safe }}
-<div class="panel narrow">
-  <form method="post">
-    <label>Username</label>
-    <input type="text" name="username" placeholder="your username">
-    <label>Password</label>
-    <input type="text" name="password" placeholder="your password">
-    <button class="btn">Sign in</button>
-  </form>
-</div>
-<p class="sub" style="margin-top:16px">Demo account: <code>pema</code> /
-<code>pema123</code>.</p>
-{{ result|safe }}
-"""
-
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    result = ""
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-
-        # VULNERABLE: user input pasted straight into the query.
-        query = ("SELECT id, username, role FROM users "
-                 f"WHERE username = '{username}' AND password = '{password}'")
-        conn = get_connection()
-        try:
-            row = conn.execute(query).fetchone()
-            if row:
-                result = (f"<div class='box ok'>Logged in as <b>{row['username']}</b> "
-                          f"(role: {row['role']})</div>")
-            else:
-                result = "<div class='box bad'>Invalid credentials</div>"
-        except sqlite3.Error as e:
-            result = f"<div class='box bad'>SQL error: {e}</div>"
-        finally:
-            conn.close()
-        result += f"<div class='querylabel'>Query that ran</div><pre>{query}</pre>"
-
-    strip = mode_strip("vulnerable", "/login", "/secure/login", "secure login")
-    return page("Sign in", render_template_string(LOGIN_FORM, result=result, strip=strip))
-
-
-@app.route("/secure/login", methods=["GET", "POST"])
-def secure_login():
-    result = ""
-    if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-
-        # SECURE: values are bound, never concatenated.
-        query = ("SELECT id, username, role FROM users "
-                 "WHERE username = ? AND password = ?")
-        conn = get_connection()
-        try:
-            row = conn.execute(query, (username, password)).fetchone()
-            if row:
-                result = (f"<div class='box ok'>Logged in as <b>{row['username']}</b> "
-                          f"(role: {row['role']})</div>")
-            else:
-                result = "<div class='box bad'>Invalid credentials</div>"
-        except sqlite3.Error:
-            result = "<div class='box bad'>Something went wrong</div>"
-        finally:
-            conn.close()
-        result += ("<div class='querylabel'>Prepared statement</div>"
-                   "<pre>SELECT id, username, role FROM users "
-                   "WHERE username = ? AND password = ?</pre>")
-
-    strip = mode_strip("secure", "/secure/login", "/login", "vulnerable login")
-    return page("Sign in (secure)",
-                render_template_string(LOGIN_FORM, result=result, strip=strip))
-
-
-# ===========================================================================
-# 2. PRODUCT BY ID  ->  UNION based (numeric context)
-# ===========================================================================
-
-def render_products(rows, columns):
-    head = "".join(f"<th>{c}</th>" for c in columns)
+def results_table(rows):
+    if not rows:
+        return "<div class='box'>No products found.</div>"
     body = ""
     for r in rows:
-        cells = "".join(f"<td>{r[i]}</td>" for i in range(len(columns)))
+        cells = "".join(f"<td>{r[i]}</td>" for i in range(len(r)))
         body += f"<tr>{cells}</tr>"
-    return f"<table><tr>{head}</tr>{body}</table>"
+    return ("<table><tr><th>#</th><th>Product</th><th>Description</th>"
+            f"<th>Price</th></tr>{body}</table>")
 
 
 @app.route("/product")
 def product():
     pid = request.args.get("id", "1")
-    # VULNERABLE: numeric id pasted in with no quotes and no validation.
     query = f"SELECT id, name, description, price FROM products WHERE id = {pid}"
     conn = get_connection()
     try:
         rows = conn.execute(query).fetchall()
-        table = (render_products(rows, ["id", "name", "description", "price"])
-                 if rows else "<div class='box'>No such product</div>")
+        out = results_table(rows)
     except sqlite3.Error as e:
-        table = f"<div class='box bad'>SQL error: {e}</div>"
+        out = f"<div class='box bad'>Database error: {e}</div>"
     finally:
         conn.close()
-
-    strip = mode_strip("vulnerable", "/product", "/secure/product?id=1", "secure version")
-    body = (f"<h1 class='page'>Product details</h1>"
-            f"<p class='sub'>Showing product id = <code>{pid}</code></p>{strip}{table}"
-            f"<div class='querylabel'>Query that ran</div><pre>{query}</pre>")
-    return page("Product", body)
+    return page("Product", f"<h1 class='page'>Product</h1>{out}")
 
 
 @app.route("/secure/product")
 def secure_product():
     pid = request.args.get("id", "1")
-    strip = mode_strip("secure", "/secure/product", "/product?id=1", "vulnerable version")
-    # SECURE: an id must be an integer.
     if not pid.isdigit():
-        return page("Product (secure)",
-                    f"<h1 class='page'>Product details</h1>{strip}"
-                    "<div class='box bad'>Invalid product id</div>")
-    query = "SELECT id, name, description, price FROM products WHERE id = ?"
+        return page("Product", "<h1 class='page'>Product</h1>"
+                    "<div class='box bad'>Product not found.</div>")
     conn = get_connection()
-    try:
-        rows = conn.execute(query, (int(pid),)).fetchall()
-        table = (render_products(rows, ["id", "name", "description", "price"])
-                 if rows else "<div class='box'>No such product</div>")
-    except sqlite3.Error:
-        table = "<div class='box bad'>Something went wrong</div>"
-    finally:
-        conn.close()
-    body = (f"<h1 class='page'>Product details</h1>"
-            f"<p class='sub'>Showing product id = <code>{pid}</code></p>{strip}{table}")
-    return page("Product (secure)", body)
+    rows = conn.execute("SELECT id, name, description, price FROM products "
+                        "WHERE id = ?", (int(pid),)).fetchall()
+    conn.close()
+    return page("Product", f"<h1 class='page'>Product</h1>{results_table(rows)}")
 
-
-# ===========================================================================
-# 3. SEARCH  ->  UNION based (string context, inside a LIKE)
-# ===========================================================================
 
 @app.route("/search")
 def search():
     term = request.args.get("q", "")
-    # VULNERABLE: search term pasted inside a quoted LIKE clause.
     query = ("SELECT id, name, description, price FROM products "
              f"WHERE name LIKE '%{term}%'")
     conn = get_connection()
     try:
         rows = conn.execute(query).fetchall()
-        table = (render_products(rows, ["id", "name", "description", "price"])
-                 if rows else "<div class='box'>No matches</div>")
+        out = results_table(rows)
     except sqlite3.Error as e:
-        table = f"<div class='box bad'>SQL error: {e}</div>"
+        out = f"<div class='box bad'>Database error: {e}</div>"
     finally:
         conn.close()
-    strip = mode_strip("vulnerable", "/search", "/secure/search?q=key", "secure search")
-    body = (f"<h1 class='page'>Search results</h1>"
-            f"<p class='sub'>Results for <code>{term}</code></p>{strip}{table}"
-            f"<div class='querylabel'>Query that ran</div><pre>{query}</pre>")
-    return page("Search", body)
+    return page("Search", f"<h1 class='page'>Search results</h1>"
+                f"<p class='sub'>Showing results for &ldquo;{term}&rdquo;</p>{out}")
 
 
 @app.route("/secure/search")
 def secure_search():
     term = request.args.get("q", "")
-    query = ("SELECT id, name, description, price FROM products WHERE name LIKE ?")
+    conn = get_connection()
+    rows = conn.execute("SELECT id, name, description, price FROM products "
+                        "WHERE name LIKE ?", (f"%{term}%",)).fetchall()
+    conn.close()
+    return page("Search", f"<h1 class='page'>Search results</h1>"
+                f"<p class='sub'>Showing results for &ldquo;{term}&rdquo;</p>"
+                f"{results_table(rows)}")
+
+
+# ---------------------------------------------------------------------------
+# Account sign in  (auth bypass + error based)
+# ---------------------------------------------------------------------------
+
+LOGIN_FORM = """
+<h1 class="page">Sign in to your account</h1>
+<p class="sub">Access your orders and saved items.</p>
+<div class="panel narrow">
+  {% if error %}<div class="box bad">{{ error }}</div>{% endif %}
+  <form method="post">
+    <label>Username</label>
+    <input type="text" name="username" placeholder="your username">
+    <label>Password</label>
+    <input type="password" name="password" placeholder="your password">
+    <button class="btn">Sign in</button>
+  </form>
+</div>
+"""
+
+
+def login_core(secure):
+    username = request.form.get("username", "")
+    password = request.form.get("password", "")
     conn = get_connection()
     try:
-        rows = conn.execute(query, (f"%{term}%",)).fetchall()
-        table = (render_products(rows, ["id", "name", "description", "price"])
-                 if rows else "<div class='box'>No matches</div>")
-    except sqlite3.Error:
-        table = "<div class='box bad'>Something went wrong</div>"
-    finally:
+        if secure:
+            row = conn.execute("SELECT id, username, role FROM users "
+                               "WHERE username = ? AND password = ?",
+                               (username, password)).fetchone()
+        else:
+            q = ("SELECT id, username, role FROM users "
+                 f"WHERE username = '{username}' AND password = '{password}'")
+            row = conn.execute(q).fetchone()
+    except sqlite3.Error as e:
         conn.close()
-    strip = mode_strip("secure", "/secure/search", "/search?q=key", "vulnerable search")
-    body = (f"<h1 class='page'>Search results</h1>"
-            f"<p class='sub'>Results for <code>{term}</code></p>{strip}{table}")
-    return page("Search (secure)", body)
+        # vulnerable path leaks the error; secure path hides it
+        if secure:
+            return render_template_string(LOGIN_FORM, error="Something went wrong.")
+        return render_template_string(LOGIN_FORM, error=f"Database error: {e}")
+    conn.close()
+    if row:
+        session["user"] = row["username"]
+        session["role"] = row["role"]
+        return None  # signal: redirect to account
+    return render_template_string(LOGIN_FORM, error="Incorrect username or password.")
 
 
-# ===========================================================================
-# 4 and 5. PROFILE  ->  boolean blind + time based blind
-# ===========================================================================
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        res = login_core(secure=False)
+        if res is None:
+            return redirect(url_for("account"))
+        return page("Sign in", res)
+    return page("Sign in", render_template_string(LOGIN_FORM, error=""))
 
-@app.route("/profile")
-def profile():
+
+@app.route("/secure/login", methods=["GET", "POST"])
+def secure_login():
+    if request.method == "POST":
+        res = login_core(secure=True)
+        if res is None:
+            return redirect(url_for("account"))
+        return page("Sign in", res)
+    return page("Sign in", render_template_string(LOGIN_FORM, error=""))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
+
+
+@app.route("/account")
+def account():
+    user = session.get("user")
+    if not user:
+        return redirect(url_for("login"))
+    name = display_name(user)
+    conn = get_connection()
+    if session.get("role") == "admin":
+        users = conn.execute("SELECT username, email, role FROM users").fetchall()
+        orders = conn.execute("SELECT customer, item, total FROM orders").fetchall()
+        conn.close()
+        urows = "".join(f"<tr><td>{u['username']}</td><td>{u['email']}</td>"
+                        f"<td>{u['role']}</td></tr>" for u in users)
+        orows = "".join(f"<tr><td>{o['customer']}</td><td>{o['item']}</td>"
+                        f"<td>Nu. {int(o['total']):,}</td></tr>" for o in orders)
+        body = f"""
+        <h1 class="page">Admin dashboard</h1>
+        <p class="sub">Signed in as {name} &middot; administrator</p>
+        <div class="panel"><h2 class="ph2">All customer accounts</h2>
+          <table><tr><th>Username</th><th>Email</th><th>Role</th></tr>{urows}</table></div>
+        <div class="panel"><h2 class="ph2">Recent orders</h2>
+          <table><tr><th>Customer</th><th>Item</th><th>Total</th></tr>{orows}</table></div>
+        """
+    else:
+        orders = conn.execute("SELECT item, total FROM orders WHERE customer = ?",
+                              (name,)).fetchall()
+        conn.close()
+        orows = ("".join(f"<tr><td>{o['item']}</td><td>Nu. {int(o['total']):,}</td></tr>"
+                         for o in orders)
+                 or "<tr><td colspan=2>No orders yet.</td></tr>")
+        body = f"""
+        <h1 class="page">Welcome back, {name}</h1>
+        <p class="sub">Your account overview.</p>
+        <div class="panel"><h2 class="ph2">Your orders</h2>
+          <table><tr><th>Item</th><th>Total</th></tr>{orows}</table></div>
+        """
+    return page("My account", body)
+
+
+# ---------------------------------------------------------------------------
+# Registration username check  (blind: boolean + time based)
+# ---------------------------------------------------------------------------
+
+@app.route("/check-username")
+def check_username():
     username = request.args.get("username", "")
     query = f"SELECT id FROM users WHERE username = '{username}'"
     conn = get_connection()
     try:
         row = conn.execute(query).fetchone()
-        msg = ("<div class='box ok'>User exists</div>" if row
-               else "<div class='box bad'>No such user</div>")
+        msg = ("<div class='box bad'>That username is already taken.</div>" if row
+               else "<div class='box ok'>That username is available.</div>")
     except sqlite3.Error:
-        msg = "<div class='box bad'>No such user</div>"
+        msg = "<div class='box ok'>That username is available.</div>"
     finally:
         conn.close()
-    strip = mode_strip("vulnerable", "/profile", "/secure/profile?username=admin", "secure version")
-    return page("Username check",
-                f"<h1 class='page'>Username availability</h1>"
-                f"<p class='sub'>Checking username <code>{username}</code></p>{strip}{msg}")
+    return page("Username check", f"<h1 class='page'>Choose a username</h1>"
+                f"<p class='sub'>Checking &ldquo;{username}&rdquo;</p>{msg}")
 
 
-@app.route("/secure/profile")
-def secure_profile():
+@app.route("/secure/check-username")
+def secure_check_username():
     username = request.args.get("username", "")
-    query = "SELECT id FROM users WHERE username = ?"
     conn = get_connection()
-    try:
-        row = conn.execute(query, (username,)).fetchone()
-        msg = ("<div class='box ok'>User exists</div>" if row
-               else "<div class='box bad'>No such user</div>")
-    finally:
-        conn.close()
-    strip = mode_strip("secure", "/secure/profile", "/profile?username=admin", "vulnerable version")
-    return page("Username check (secure)",
-                f"<h1 class='page'>Username availability</h1>"
-                f"<p class='sub'>Checking username <code>{username}</code></p>{strip}{msg}")
+    row = conn.execute("SELECT id FROM users WHERE username = ?",
+                       (username,)).fetchone()
+    conn.close()
+    msg = ("<div class='box bad'>That username is already taken.</div>" if row
+           else "<div class='box ok'>That username is available.</div>")
+    return page("Username check", f"<h1 class='page'>Choose a username</h1>"
+                f"<p class='sub'>Checking &ldquo;{username}&rdquo;</p>{msg}")
 
 
-# ===========================================================================
-# 6. TRACK  ->  stacked queries
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# View counter  (stacked queries)
+# ---------------------------------------------------------------------------
 
 @app.route("/track")
 def track():
@@ -364,37 +350,31 @@ def track():
     try:
         conn.executescript(script)
         conn.commit()
-        msg = "<div class='box ok'>View counted</div>"
+        msg = "<div class='box ok'>Thanks, your view was recorded.</div>"
     except sqlite3.Error as e:
-        msg = f"<div class='box bad'>SQL error: {e}</div>"
+        msg = f"<div class='box bad'>Error: {e}</div>"
     finally:
         conn.close()
-    return page("Track view",
-                f"<h1 class='page'>Track product view</h1>{msg}"
-                f"<div class='querylabel'>Script that ran</div><pre>{script}</pre>")
+    return page("Track", f"<h1 class='page'>Product view</h1>{msg}")
 
 
 @app.route("/secure/track")
 def secure_track():
     pid = request.args.get("id", "1")
     if not pid.isdigit():
-        return page("Track view (secure)",
-                    "<h1 class='page'>Track product view</h1>"
-                    "<div class='box bad'>Invalid product id</div>")
+        return page("Track", "<h1 class='page'>Product view</h1>"
+                    "<div class='box bad'>Invalid request.</div>")
     conn = get_connection()
-    try:
-        conn.execute("UPDATE products SET views = views + 1 WHERE id = ?", (int(pid),))
-        conn.commit()
-        msg = "<div class='box ok'>View counted</div>"
-    finally:
-        conn.close()
-    return page("Track view (secure)",
-                f"<h1 class='page'>Track product view</h1>{msg}")
+    conn.execute("UPDATE products SET views = views + 1 WHERE id = ?", (int(pid),))
+    conn.commit()
+    conn.close()
+    return page("Track", "<h1 class='page'>Product view</h1>"
+                "<div class='box ok'>Thanks, your view was recorded.</div>")
 
 
-# ===========================================================================
-# 7. SECOND ORDER (register stores safely, reset trusts the stored value)
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# Second order (register stores safely, reset trusts the stored value)
+# ---------------------------------------------------------------------------
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -424,7 +404,6 @@ def reset():
         if not stored:
             return jsonify({"message": "no such account"})
         stored_username = stored["username"]
-        # VULNERABLE: the stored username is trusted and concatenated.
         update = (f"UPDATE users SET password = '{new_password}' "
                   f"WHERE username = '{stored_username}'")
         conn.executescript(update)

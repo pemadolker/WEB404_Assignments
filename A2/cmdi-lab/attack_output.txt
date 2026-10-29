@@ -26,7 +26,7 @@ Goal   : run a command using $( ) or backticks, with NO separator
 Here the inner result is swallowed by the lookup, so I prove the
 inner command ran by its side effects: a delay, then a written file.
 ----------------------------------------------------------------------
-  payload 'localhost$(sleep 3)' responded in 3.02s  -> the inner sleep ran
+  payload 'localhost$(sleep 3)' responded in 3.01s  -> the inner sleep ran
   payload 'localhost`id > /tmp/cmdi_sub.txt`' created the file:
       uid=0(root) gid=0(root) groups=0(root)
 
@@ -73,8 +73,8 @@ The secure routes validate input and run commands with no shell.
   secure /lookup  payload='localhost$(id)'         -> Invalid host. Rejected.
   secure /lookup  payload='localhost`whoami`'      -> Invalid host. Rejected.
   secure /lookup  payload='localhost && whoami'    -> Invalid host. Rejected.
-  secure /backup  payload='. ; sleep 5'            -> Invalid label. Rejected.  (0.00s)
-  secure /backup  payload='. ; id > /tmp/cmdi_proof.txt' -> Invalid label. Rejected.  (0.01s)
+  secure /backup  payload='. ; sleep 5'            -> Invalid label. Rejected.  (0.01s)
+  secure /backup  payload='. ; id > /tmp/cmdi_proof.txt' -> Invalid label. Rejected.  (0.00s)
 
 No command ran, no delay, nothing leaked. The input was treated as a
 single argument and the allowlist rejected the bad characters too.

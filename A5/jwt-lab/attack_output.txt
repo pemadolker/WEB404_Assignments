@@ -3,9 +3,9 @@ Running JWT attacks against http://127.0.0.1:5005
 ========================================================================
   ATTACK 0: Baseline, a normal user token
 ========================================================================
-alice logs in and gets a real token. She is role user, not admin.
+pema.dolker logs in and gets a real token, role user, not admin.
 ------------------------------------------------------------------------
-vulnerable verifier: {'is_admin': False, 'ok': True, 'role': 'user', 'sub': 'alice'}
+vulnerable verifier: {'is_admin': False, 'ok': True, 'role': 'user', 'sub': 'pema.dolker'}
 
 ========================================================================
   ATTACK 1: The alg none attack
@@ -15,8 +15,8 @@ puts role admin in the payload, and removes the signature entirely.
 A verifier that trusts the header runs no signature check at all.
 ------------------------------------------------------------------------
 forged token (note the empty third part):
-   eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhbGljZSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc5MzA1MTU4M30.
-vulnerable verifier: {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'alice'}
+   eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJwZW1hLmRvbGtlciIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc5MzIyMjAxMH0.
+vulnerable verifier: {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'pema.dolker'}
 secure verifier    : {'error': 'algorithm not allowed', 'ok': False}
 
 ========================================================================
@@ -26,7 +26,7 @@ A token that expired an hour ago should be refused. A verifier that
 forgets to check the exp claim keeps honouring it forever, which
 makes a stolen old token useful long after it should have died.
 ------------------------------------------------------------------------
-vulnerable verifier: {'is_admin': False, 'ok': True, 'role': 'user', 'sub': 'alice'}
+vulnerable verifier: {'is_admin': False, 'ok': True, 'role': 'user', 'sub': 'pema.dolker'}
 secure verifier    : {'error': 'token expired', 'ok': False}
 
 ========================================================================
@@ -36,11 +36,11 @@ HS256 tokens are signed with a shared secret. If that secret is weak,
 an attacker who has any real token can guess it offline, then sign
 their own tokens that are completely valid.
 ------------------------------------------------------------------------
-trying 11 common secrets against a real token...
-cracked secret: druk2024
+trying 12 common secrets against a real token...
+cracked secret: zorig2026
 forged a correctly signed admin token with the cracked secret.
-vulnerable verifier: {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'alice'}
-secure verifier    : {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'alice'}  <- note: even the secure verifier accepts it
+vulnerable verifier: {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'pema.dolker'}
+secure verifier    : {'is_admin': True, 'ok': True, 'role': 'admin', 'sub': 'pema.dolker'}  <- note: even the secure verifier accepts it
 A correctly signed token is valid by definition. The only fix here is
 a long random secret that cannot be guessed, so the crack fails.
 

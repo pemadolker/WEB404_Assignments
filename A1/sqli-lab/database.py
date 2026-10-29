@@ -47,10 +47,10 @@ def init_db():
     cur.executemany(
         "INSERT INTO users (username, password, role, email) VALUES (?, ?, ?, ?)",
         [
-            ("admin", "S3cr3t_Admin!2026", "admin", "admin@shop.bt"),
-            ("pema", "pema123", "user", "pema@shop.bt"),
-            ("sonam", "sonam456", "user", "sonam@shop.bt"),
-            ("guest", "guest", "user", "guest@shop.bt"),
+            ("ashis.chettri", "Ch3ttri@CST!2026", "admin", "ashis.chettri@norbu.bt"),
+            ("pema.dolker", "Pema@2026", "user", "pema.dolker@norbu.bt"),
+            ("sonam.wangmo", "sonam456", "user", "sonam.wangmo@norbu.bt"),
+            ("tashi.dorji", "tashi789", "user", "tashi.dorji@norbu.bt"),
         ],
     )
 
@@ -74,6 +74,21 @@ def init_db():
             ("Webcam", "1080p USB webcam", 3200.0),
         ],
     )
+    # Orders, so the admin account has something real to look at.
+    cur.execute("""
+        CREATE TABLE orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer TEXT, item TEXT, total REAL
+        )
+    """)
+    cur.executemany(
+        "INSERT INTO orders (customer, item, total) VALUES (?, ?, ?)",
+        [
+            ("Pema Dolker", "Monitor", 18500.0),
+            ("Tashi Dorji", "Keyboard", 2400.0),
+            ("Sonam Wangmo", "Webcam", 3200.0),
+        ],
+    )
 
     # A table the normal app never shows. It exists so a UNION attack has
     # something worth stealing that the UI was never meant to expose.
@@ -88,8 +103,8 @@ def init_db():
     cur.executemany(
         "INSERT INTO app_secrets (name, value) VALUES (?, ?)",
         [
-            ("payment_api_key", "sk_live_8fQ2zR_do_not_leak_this"),
-            ("jwt_signing_secret", "kuzuzangpo_la_super_secret"),
+            ("payment_gateway_key", "pk_bt_7Qf2_internal_only"),
+            ("db_backup_password", "Norbu#Backup#2026"),
         ],
     )
 

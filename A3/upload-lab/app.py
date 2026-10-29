@@ -64,6 +64,13 @@ def ext_of(name):
 # Pages
 # ---------------------------------------------------------------------------
 
+AUTHORS = {
+    "mountains.jpg": "Pema Dolker",
+    "prayer-flags.jpg": "Sonam Wangmo",
+    "valley.jpg": "Tashi Dorji",
+    "festival.jpg": "Ashis Chettri",
+}
+
 PAGE = """
 <!doctype html>
 <html lang="en"><head>
@@ -78,38 +85,22 @@ PAGE = """
     <span class="mark">Aper<span>ture</span></span>
     <span class="tag">community photo gallery</span>
   </div>
-  <div class="modeswitch">
-    <a href="{{ url_for('home', mode='vulnerable') }}"
-       class="{{ 'on-vuln' if mode=='vulnerable' else '' }}">Vulnerable</a>
-    <a href="{{ url_for('home', mode='secure') }}"
-       class="{{ 'on-safe' if mode=='secure' else '' }}">Secure</a>
+  <div class="topnav">
+    <a href="/">Explore</a>
+    <a href="#share">Upload</a>
+    <a href="/">Pema Dolker</a>
   </div>
 </div>
 
 <div class="wrap">
 
-  {% if mode=='vulnerable' %}
-  <div class="banner vuln"><span class="dot"></span>
-    <div><b>Vulnerable uploader is active.</b> Files are saved using the name
-    the browser sent, with no checks on type or content, and served back so the
-    browser will run them. This is the attack surface.</div>
-  </div>
-  {% else %}
-  <div class="banner safe"><span class="dot"></span>
-    <div><b>Secure uploader is active.</b> Only real images pass, they are
-    re-encoded to strip anything hidden inside, renamed to a random name, size
-    limited, and served as plain downloads that cannot run.</div>
-  </div>
-  {% endif %}
-
   {% if flash %}<div class="flash {{ flash_kind }}">{{ flash|safe }}</div>{% endif %}
 
-  <div class="uploader">
+  <div class="uploader" id="share">
     <h2>Share a photo</h2>
-    <p class="hint">JPG or PNG from your last trip. It appears in the gallery
-      straight away.</p>
+    <p class="hint">Upload a JPG or PNG to add it to the community gallery.</p>
     <form class="drop" method="post" enctype="multipart/form-data"
-          action="{{ '/upload' if mode=='vulnerable' else '/secure/upload' }}">
+          action="/upload">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
         stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -123,8 +114,8 @@ PAGE = """
   </div>
 
   <div class="sectionhead">
-    <h1>The gallery</h1>
-    <span class="count">{{ files|length }} items</span>
+    <h1>Community gallery</h1>
+    <span class="count">{{ files|length }} photos</span>
   </div>
 
   <div class="grid">
@@ -139,7 +130,7 @@ PAGE = """
       </div>
       {% endif %}
       <div class="meta">
-        <span class="name" title="{{ f.name }}">{{ f.name }}</span>
+        <span class="name" title="{{ f.name }}">by {{ f.author }}</span>
         <a href="/uploads/{{ f.name }}" target="_blank">open</a>
       </div>
     </div>
@@ -147,8 +138,7 @@ PAGE = """
   </div>
 </div>
 
-<footer>Aperture is a teaching app for the file upload security practical.
-Do not deploy it. Mode: {{ mode }}.</footer>
+<footer>&copy; 2026 Aperture. A community photo gallery.</footer>
 </body></html>
 """
 
@@ -157,18 +147,16 @@ def list_files():
     items = []
     for name in sorted(os.listdir(UPLOAD_DIR)):
         e = ext_of(name)
-        items.append({"name": name, "ext": e, "is_image": e in IMAGE_EXT})
+        items.append({"name": name, "ext": e, "is_image": e in IMAGE_EXT,
+                      "author": AUTHORS.get(name, "a member")})
     return items
 
 
 @app.route("/")
 def home():
-    mode = request.args.get("mode", "vulnerable")
-    if mode not in ("vulnerable", "secure"):
-        mode = "vulnerable"
     flash = request.args.get("flash", "")
     flash_kind = request.args.get("kind", "good")
-    return render_template_string(PAGE, mode=mode, files=list_files(),
+    return render_template_string(PAGE, files=list_files(),
                                   flash=flash, flash_kind=flash_kind)
 
 
@@ -189,9 +177,8 @@ def upload():
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     f.save(dest)
 
-    msg = (f"Saved <code>{filename}</code> "
-           f"(declared type: {f.mimetype}). No checks were run.")
-    return redirect(url_for("home", mode="vulnerable", flash=msg, kind="warn"))
+    return redirect(url_for("home", flash="Your photo has been shared.",
+                            kind="good"))
 
 
 # ---------------------------------------------------------------------------

@@ -12,7 +12,8 @@ Insecure on purpose. Run only on your own machine, on localhost.
 - `attacker.py` - the malicious site that forges requests (port 5004)
 - `static/style.css` - the bank interface styling
 - `attacks.py` - shows the attack and the fix at the request level
-- `LAB_REPORT.md` - the report 
+- `LAB_REPORT.docx` / `.pdf` / `.md` - the report (submit the docx)
+- `RECREATE_STEPS.md` - how to run it and take your own screenshots
 - `attack_output.txt` - saved output of a real run
 - `screenshots/` - the screenshots used in the report
 

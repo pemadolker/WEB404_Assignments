@@ -12,7 +12,8 @@ Insecure on purpose. Run only on your own machine, on localhost.
 - `database.py` - builds a fresh SQLite database on every start
 - `static/` - the storefront styling and product images
 - `attacks.py` - runs all seven attacks and prints what each one did
-- `LAB_REPORT.md` - the report
+- `LAB_REPORT.docx` / `.pdf` / `.md` - the report (submit the docx)
+- `RECREATE_STEPS.md` - how to run it and take your own screenshots
 - `attack_output.txt` - saved output of a real run
 - `screenshots/` - the screenshots used in the report
 

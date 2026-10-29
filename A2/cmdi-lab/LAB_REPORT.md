@@ -1,10 +1,14 @@
-# Assignment 2- Lab : Command Injection
+### Assignment - Lab: Command Injection
+### Name: Pema Dolker   
+### Module:WEB404
+### Programme: BE Software Engineering
+
 
 # 1. Objective
 
 The task was to build a web application that runs operating system commands based on user input, show how that lets an attacker run their own commands on the server, cover the common ways of doing it, and then fix the application so the same attacks no longer work.
 
-To make it realistic I built a small server operations console called NetGuard Tools, the kind of admin panel a sysadmin might use. It has two command line tools. One resolves a hostname and shows the output, and one runs a backup and only says it finished. One shows output and one does not, so I can demonstrate both normal injection and blind injection.
+To make it realistic I built a server operations console called NetGuard Tools, the kind of admin panel a sysadmin would use on a server, running on a node named cst-web-01. It has two command line tools. One resolves a hostname and shows the output, and one runs a backup and only says it finished. One shows output and one does not, so I can demonstrate both normal injection and blind injection. The console looks like a normal tool and nothing on it hints at the flaw, which is how a genuine vulnerable panel behaves.
 
 # 2. Tools used
 
@@ -24,7 +28,7 @@ It is worth noticing that this is the same shape of bug as SQL injection. In SQL
 
 Here is the console. The host lookup tool is the in band target.
 
-![The NetGuard host lookup tool](screenshots/01_lookup_tool.png) 
+![The NetGuard host lookup tool](screenshots/01_lookup_tool.png)
 
 Used normally, it just resolves a name to an IP.
 
@@ -95,7 +99,11 @@ For completeness, out of band injection is used when there is no output and no r
 
 Here is the whole attack script run against the console, with every technique and its result in one place.
 
-![The full attack script output](screenshots/07_attacks_terminal.png)
+![The attack script output (1 of 3)](screenshots/07_attacks_terminal_1.png)
+
+![The attack script output (2 of 3)](screenshots/07_attacks_terminal_2.png)
+
+![The attack script output (3 of 3)](screenshots/07_attacks_terminal_3.png)
 
 # 6. Securing the application
 

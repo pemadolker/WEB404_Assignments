@@ -54,19 +54,19 @@ def current_user():
 LOGIN = """
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Druk Bank</title>
+<title>Druk Bank - Online Banking</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
 <div class="login-wrap"><div class="login-card">
   <h1>Druk Bank</h1>
-  <p class="muted">Sign in to your account.</p>
+  <p class="muted">Sign in to your online banking.</p>
   {% if error %}<div class="flash warn">{{ error }}</div>{% endif %}
   <form method="post">
-    <label>Username</label><input type="text" name="username" value="pema">
-    <label>Password</label><input type="password" name="password" value="pema123">
+    <label>Username</label><input type="text" name="username" placeholder="username">
+    <label>Password</label><input type="password" name="password" placeholder="password">
     <button class="btn full">Sign in</button>
   </form>
-  <p class="muted" style="margin-top:14px">Demo logins: pema / pema123 (the
-  victim), mallory / mallory123 (the attacker).</p>
+  <p class="muted" style="margin-top:14px">Forgot your password? Visit any
+  branch with your CID.</p>
 </div></div></body></html>
 """
 
@@ -77,27 +77,9 @@ DASH = """
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
 <div class="topbar">
   <div class="brand"><span class="logo"></span> Druk Bank</div>
-  <div class="modeswitch">
-    <a href="{{ url_for('dashboard', mode='vulnerable') }}"
-       class="{{ 'on-vuln' if mode=='vulnerable' else '' }}">Vulnerable</a>
-    <a href="{{ url_for('dashboard', mode='secure') }}"
-       class="{{ 'on-safe' if mode=='secure' else '' }}">Secure</a>
-  </div>
   <div class="who">{{ acct.name }} &nbsp;|&nbsp; <a href="{{ url_for('logout') }}">sign out</a></div>
 </div>
 <div class="wrap">
-  {% if mode=='vulnerable' %}
-  <div class="banner vuln"><span class="dot"></span><div>
-    <b>Vulnerable mode.</b> The transfer below posts to <code>/transfer</code>,
-    which trusts the login cookie and nothing else. It even accepts GET, so a
-    single image tag on another page can move your money.</div></div>
-  {% else %}
-  <div class="banner safe"><span class="dot"></span><div>
-    <b>Secure mode.</b> The transfer posts to <code>/secure/transfer</code> with
-    a secret CSRF token tied to your session. A forged request from another
-    page cannot know the token, so it is rejected.</div></div>
-  {% endif %}
-
   {% if flash %}<div class="flash {{ flash_kind }}">{{ flash }}</div>{% endif %}
 
   <div class="cols">
@@ -114,16 +96,11 @@ DASH = """
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
       {% endif %}
         <label>To account</label>
-        <input type="text" name="to" placeholder="e.g. mallory">
+        <input type="text" name="to" placeholder="recipient username">
         <label>Amount (Nu.)</label>
         <input type="number" name="amount" placeholder="0">
         <button class="btn">Send money</button>
       </form>
-      {% if mode=='secure' %}
-      <div class="token-note">This form carries a hidden CSRF token:
-        {{ csrf[:16] }}... The server only accepts a transfer that includes the
-        matching token.</div>
-      {% endif %}
     </div>
 
     <div class="card">
@@ -141,8 +118,7 @@ DASH = """
     </div>
   </div>
 </div>
-<footer>Druk Bank is a teaching app for the CSRF practical. Do not deploy it.
-Mode: {{ mode }}.</footer>
+<footer>&copy; 2026 Druk Bank Ltd. Member, Royal Monetary Authority of Bhutan.</footer>
 </body></html>
 """
 

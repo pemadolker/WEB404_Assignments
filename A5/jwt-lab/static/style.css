@@ -36,6 +36,9 @@ a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
 .brand span{color:var(--signal)}
 .topbar .right{display:flex;align-items:center;gap:16px;font-size:13px;color:var(--muted)}
 .topbar .right a{color:var(--ink)}
+.topbar .right .me{color:var(--signal);font-weight:600}
+h1.page{font-size:22px;margin:0 0 5px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 20px}
 
 .modeswitch{display:flex;background:#0a0e13;border:1px solid var(--line);
   border-radius:999px;padding:3px;gap:3px}

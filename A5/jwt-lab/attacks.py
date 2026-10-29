@@ -44,9 +44,9 @@ def check(token, mode):
 # ---------------------------------------------------------------------------
 def baseline():
     banner(0, "Baseline, a normal user token")
-    print("alice logs in and gets a real token. She is role user, not admin.")
+    print("pema.dolker logs in and gets a real token, role user, not admin.")
     line()
-    tok = T.issue("alice", "user")
+    tok = T.issue("pema.dolker", "user")
     print("vulnerable verifier:", check(tok, "vulnerable"))
 
 
@@ -59,7 +59,7 @@ def attack_alg_none():
     print("puts role admin in the payload, and removes the signature entirely.")
     print("A verifier that trusts the header runs no signature check at all.")
     line()
-    forged = T.forge_none("alice", "admin")
+    forged = T.forge_none("pema.dolker", "admin")
     print("forged token (note the empty third part):")
     print("  ", forged)
     print("vulnerable verifier:", check(forged, "vulnerable"))
@@ -75,7 +75,7 @@ def attack_expired():
     print("forgets to check the exp claim keeps honouring it forever, which")
     print("makes a stolen old token useful long after it should have died.")
     line()
-    expired = T.issue("alice", "user", ttl=-3600)   # expired an hour ago
+    expired = T.issue("pema.dolker", "user", ttl=-3600)   # expired an hour ago
     print("vulnerable verifier:", check(expired, "vulnerable"))
     print("secure verifier    :", check(expired, "secure"))
 
@@ -91,13 +91,13 @@ def attack_weak_secret():
     line()
 
     # The attacker starts with one normal token (for example their own).
-    real = T.issue("alice", "user")
+    real = T.issue("pema.dolker", "user")
     h, p, _ = real.split(".")
     signing_input = f"{h}.{p}".encode()
     real_sig = T.b64u_dec(real.split(".")[2])
 
     wordlist = ["password", "123456", "admin", "letmein", "qwerty",
-                "secret", "jwt", "token", "drukbank", "druk2024", "changeme"]
+                "secret", "jwt", "token", "cst", "zorig", "zorig2026", "changeme"]
     print(f"trying {len(wordlist)} common secrets against a real token...")
     found = None
     for guess in wordlist:
@@ -107,7 +107,7 @@ def attack_weak_secret():
             break
     print("cracked secret:", found)
 
-    forged = T.forge_hs256("alice", "admin", found.encode())
+    forged = T.forge_hs256("pema.dolker", "admin", found.encode())
     print("forged a correctly signed admin token with the cracked secret.")
     print("vulnerable verifier:", check(forged, "vulnerable"))
     print("secure verifier    :", check(forged, "secure"),
@@ -145,7 +145,7 @@ def attack_algorithm_confusion():
 
     # Attacker forges an HS256 token, using the public key PEM as the secret.
     header = {"alg": "HS256", "typ": "JWT"}
-    payload = {"sub": "alice", "role": "admin", "exp": int(time.time()) + 3600}
+    payload = {"sub": "pema.dolker", "role": "admin", "exp": int(time.time()) + 3600}
     h = b64u(json.dumps(header, separators=(",", ":")).encode())
     p = b64u(json.dumps(payload, separators=(",", ":")).encode())
     sig = b64u(hmac.new(pub_pem, f"{h}.{p}".encode(), hashlib.sha256).digest())
