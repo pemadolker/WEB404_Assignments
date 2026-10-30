@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="130"><rect width="460" height="130" fill="#eef"/><text x="20" y="40" font-family="system-ui" font-size="16">harmless looking svg</text><script>document.querySelector("text").textContent="SVG XSS executed in origin "+document.domain;</script></svg>
