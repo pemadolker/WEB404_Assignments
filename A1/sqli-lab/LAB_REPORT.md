@@ -1,7 +1,7 @@
-### Assignment 1 - Lab : SQL Injection
-### Name: Pema Dolker    
-### Module: WEB404
-### Programme: BE Software Engineering
+#### Assignment 1 - Lab : SQL Injection  
+#### Name: Pema Dolker    
+#### Module: WEB404
+#### Programme: BE Software Engineering
 
 
 # 1. Objective
@@ -57,6 +57,7 @@ In the username box I typed `ashis.chettri'-- ` and any password. The query beco
 ```
 SELECT id, username, role FROM users WHERE username = 'ashis.chettri'--' AND password = 'anything'
 ```
+![alt text](<screenshots/Screenshot From 2026-10-30 22-41-56.png>)
 
 The `'` closes the username string early, and `--` turns the rest of the line into a comment, so the password check is thrown away. The database looks up the lecturer's account and returns it, and the store signs me straight into the administrator dashboard, which lists every customer account and every order. I never knew the password.
 
@@ -79,6 +80,7 @@ First I found the column count using `ORDER BY` on the product id, counting up u
 ```
 0 UNION SELECT username, password, role, email FROM users
 ```
+![alt text](screenshots/unionurl.png)
 
 The product listing then showed every account and every password, including the lecturer's administrator password, sitting where the products should be.
 
@@ -103,6 +105,7 @@ The username checker, used when choosing a username at registration, only ever s
 ```
 ashis.chettri' AND substr((SELECT password FROM users WHERE username='ashis.chettri'),1,1)='C'-- 
 ```
+
 
 If the checker says "taken" the guess was right, if it says "available" it was wrong. Here the same payload with a correct first character returns "taken", and with a wrong one returns "available", which is the yes or no oracle the whole attack rests on.
 
@@ -163,6 +166,8 @@ Here is the whole attack script run against the store, so every result can be se
 The fixes come in layers, and the first one is the real cure.
 
 **Parameterised queries.** This is the main fix and every secure route uses it. The query text is fixed and the user input is bound separately, so input can never change the meaning of the query. When I fired the same payloads at the secure routes, the sign in bypass failed, the UNION payload was refused, and the blind loop got "available" every time because the whole payload was treated as one literal username. Here the secure sign in refuses the same bypass that reached the admin dashboard a moment ago.
+
+![alt text](screenshots/06.png)
 
 ![The secure sign in rejecting the same bypass payload](screenshots/06_secure_login_blocked.png)
 
