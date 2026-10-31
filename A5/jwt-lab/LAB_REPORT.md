@@ -26,6 +26,8 @@ The portal has two seeded accounts, both ordinary users, including my own, Pema 
 
 After signing in as Pema Dolker, the portal shows a normal dashboard. The access level is user.
 
+![alt text](<screenshots/image copy.png>)
+
 ![The portal dashboard after a normal sign in, access level user](screenshots/02_dashboard_user.png)
 
 The administration area refuses a normal account, because the access level is user, not admin. This is what the attacks try to get past.
@@ -39,6 +41,8 @@ To carry a forged token in the browser, an attacker edits the session cookie wit
 ## 5.1 The alg none attack
 
 This is the simplest and most famous. The JWT standard allows an algorithm called none, which means the token is unsigned. A verifier that honours it is in trouble, because an unsigned token can be written by anyone. The attack is to take a token, change the header algorithm to none, set the access level to admin in the payload, and delete the signature.
+
+![alt text](<screenshots/image copy 4.png>)
 
 With that forged token set as the cookie, the portal in its default mode read the header, saw none, skipped the signature check completely, and believed the payload. A student account is now standing inside the administration area, which lists every account.
 
@@ -66,7 +70,6 @@ Here is the full attack run with all four attacks and their results.
 
 ![The attack script output (2 of 3)](screenshots/08_attacks_terminal_2.png)
 
-![The attack script output (3 of 3)](screenshots/08_attacks_terminal_3.png)
 
 # 6. Secure handling
 
