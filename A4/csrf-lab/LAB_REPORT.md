@@ -52,7 +52,11 @@ I never filled in a transfer and never pressed send. Opening one page on another
 
 The bank also makes a second mistake: it accepts the transfer as a GET request, not just a POST. That makes the attack even simpler. Any tag that makes the browser fetch a URL can carry it, and the easiest is an image. This attacker page just claims to show a cat, but it holds an invisible one pixel image whose source is the transfer URL, so the transfer fires just by loading the page, with no form and no script at all.
 
+
+
 ![The GET attack page, which fires the transfer through a hidden image tag](screenshots/07_attacker_get.png)
+
+![alt text](<screenshots/image copy 5.png>)
 
 This is why a state changing action should never be reachable by GET, because GET requests are fired by images, link previews and prefetching.
 
@@ -64,8 +68,7 @@ Here is the full run at the request level, showing both forgeries succeeding and
 
 ![The attack script output (1 of 2)](screenshots/08_attacks_terminal_1.png)
 
-![The attack script output (2 of 2)](screenshots/08_attacks_terminal_2.png)
-
+=
 # 6. The fix: a CSRF token
 
 The defence is a synchronizer token. When the bank builds the real transfer page for you, it puts a long random secret into a hidden field in the form, and remembers the same secret in your session on the server. When the form is submitted, the bank checks that the secret in the form matches the one in your session. A real submission from the real page has it. A forged submission from the attacker's page does not, because the attacker was never given the token and cannot read it out of your session or your other tab.
@@ -74,7 +77,11 @@ The token lives in a hidden field, so the protected bank looks exactly the same 
 
 ![The bank with the CSRF token added, visually identical](screenshots/05_bank_secure.png)
 
+![alt text](<screenshots/image copy 7.png>)
+
 Then I pointed the attacker's page at the protected endpoint. It submits the same forged transfer, but with no token, because it cannot know one. The bank rejects it and the balance does not move.
+
+
 
 ![The forged request against the protected endpoint is blocked](screenshots/06_secure_blocked.png)
 
